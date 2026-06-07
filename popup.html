@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html style="background: #121212;">
+<head>
+  <meta charset="utf-8">
+  <style>
+    /* Базовые настройки окна */
+    body {
+      margin: 0;
+      padding: 0;
+      width: 320px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #fff;
+      position: relative;
+    }
+
+    /* Размытый фон (на весь экран) */
+    #bg-blur {
+      position: fixed;
+      top: -10%; left: -10%; right: -10%; bottom: -10%;
+      background-size: cover;
+      background-position: center;
+      filter: blur(30px) brightness(0.35);
+      z-index: 1;
+      transition: background-image 0.5s ease-in-out;
+    }
+
+    /* Главный контейнер */
+    #content-wrapper {
+      position: relative;
+      z-index: 2;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    #error-msg { 
+      display: none; 
+      color: #ff8888; 
+      text-align: center; 
+      font-size: 14px; 
+      line-height: 1.5;
+      user-select: text !important;
+      background: rgba(0,0,0,0.6);
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    #player { 
+      display: none; 
+      flex-direction: column; 
+      align-items: center; 
+      width: 100%;
+    }
+
+    /* =========================================
+       БЛОК 1: ПУЛЬТ УПРАВЛЕНИЯ (НАВЕРХУ)
+       ========================================= */
+    .control-panel {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      width: 100%;
+      padding: 18px 20px;
+      box-sizing: border-box;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    /* Переключение треков (верхний ряд в пульте) */
+    .main-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    /* Действия (нижний ряд в пульте) */
+    .action-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    /* Общие стили для кнопок */
+    .btn {
+      background: none; border: none; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      color: rgba(255,255,255,0.8);
+      padding: 0;
+      user-select: none;
+    }
+    .btn:hover { color: #fff; transform: scale(1.15); }
+    .btn:active { transform: scale(0.95); }
+
+    .btn-nav svg { width: 28px; height: 28px; fill: currentColor; }
+
+    /* Кнопка Плей/Пауза */
+    .btn-main {
+      background: #ffcc00; color: #000; border-radius: 50%;
+      width: 52px; height: 52px;
+      box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+    }
+    .btn-main:hover {
+      background: #ffe066; color: #000;
+      box-shadow: 0 6px 20px rgba(255, 204, 0, 0.6);
+    }
+    .btn-main svg { width: 24px; height: 24px; fill: currentColor; }
+
+    /* Кнопки Лайк и Скачать */
+    .btn-action {
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+      width: 44px; height: 44px;
+      /* Добавлено свойство, чтобы иконки из JS вставлялись правильно */
+      color: #fff; 
+    }
+    .btn-action:hover { background: rgba(255,255,255,0.2); }
+    .btn-action svg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    
+    #btn-like.liked svg { fill: #ff3333; stroke: #ff3333; }
+
+    /* =========================================
+       БЛОК 2: ИНФОРМАЦИЯ О ТРЕКЕ (ВНИЗУ)
+       ========================================= */
+    .cover {
+      width: 140px;
+      height: 140px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      object-fit: cover;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    .title, .artist {
+      display: block;
+      width: 100%;
+      white-space: normal;
+      word-wrap: break-word;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      cursor: text;
+      text-align: center;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 6px 0;
+      line-height: 1.3;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .artist {
+      font-size: 13px;
+      color: rgba(255,255,255,0.75);
+      margin: 0 0 8px 0;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+
+    @keyframes ym-dl-spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="bg-blur"></div>
+
+  <div id="content-wrapper">
+    <div id="error-msg">Пожалуйста, <b>обновите вкладку</b> Яндекс Музыки (нажмите F5) или включите воспроизведение любого трека.</div>
+    
+    <div id="player">
+      
+      <!-- НОВЫЙ БЛОК: ПАНЕЛЬ УПРАВЛЕНИЯ ПРЯМО ПОД МЫШКОЙ -->
+      <div class="control-panel">
+        
+        <div class="main-controls">
+          <button id="btn-prev" class="btn btn-nav" title="Предыдущий трек">
+            <svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" stroke-width="2"></line></svg>
+          </button>
+          
+          <button id="btn-play" class="btn btn-main" title="Воспроизведение/Пауза">
+            <svg id="play-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg id="pause-icon" viewBox="0 0 24 24" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          </button>
+          
+          <button id="btn-next" class="btn btn-nav" title="Следующий трек">
+            <svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" stroke-width="2"></line></svg>
+          </button>
+        </div>
+
+        <div class="action-controls">
+          <button id="btn-like" class="btn btn-action" title="Мне нравится">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          </button>
+          
+          <button id="btn-download" class="btn btn-action" title="Скачать MP3">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- НИЖНИЙ БЛОК: КРАСИВАЯ ИНФОРМАЦИЯ -->
+      <img id="cover" class="cover" src="icon.png" alt="Cover">
+      
+      <div id="title" class="title">Загрузка...</div>
+      <div id="artist" class="artist">Яндекс Музыка</div>
+
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

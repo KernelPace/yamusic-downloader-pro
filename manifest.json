@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "YaMusic Downloader PRO",
+  "version": "1.0.0",
+  "description": "Скачивание MP3 (320kbps) с правильными именами и API-управление лайками.",
+  "permissions": [
+    "downloads",
+    "storage",
+    "tabs",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://music.yandex.ru/*",
+    "https://api.music.yandex.ru/*",
+    "https://*.storage.yandex.net/*",
+    "https://storage.mds.yandex.net/*",
+    "https://*.yandex.ru/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Управление треком"
+  },
+  "options_page": "options.html",
+"content_scripts": [
+  {
+    "matches": [
+      "https://music.yandex.ru/",
+      "https://music.yandex.ru/*"
+    ],
+    "js": ["button-config.js", "content.js"],
+    "run_at": "document_idle"
+  },
+  {
+    "matches": [
+      "https://music.yandex.ru/",
+      "https://music.yandex.ru/*"
+    ],
+    "js": ["vibe-interceptor.js"],
+    "run_at": "document_start",
+    "world": "MAIN"
+  }
+],
+  "icons": {
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

@@ -4,9 +4,11 @@
 
 **Мощное, стабильное и умное расширение для скачивания музыки с Яндекс Музыки в браузере Google Chrome.**
 
-[![Version](https://img.shields.io/badge/Версия-1.0.0-blue.svg?style=for-the-badge)](https://github.com/ВАШ_НИК/yamusic-downloader-pro/releases)
-[![Chrome](https://img.shields.io/badge/Chrome-Extension-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/ВАШ_НИК/yamusic-downloader-pro)
+[![Version](https://img.shields.io/badge/Версия-1.0.0-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
+[![Chrome](https://img.shields.io/badge/Chrome-Extension-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![License](https://img.shields.io/badge/Лицензия-MIT-orange.svg?style=for-the-badge)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/KernelPace/yamusic-downloader-pro/total.svg?style=for-the-badge&color=brightgreen)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
+[![Stars](https://img.shields.io/github/stars/KernelPace/yamusic-downloader-pro.svg?style=for-the-badge&color=yellow)](https://github.com/KernelPace/yamusic-downloader-pro/stargazers)
 
 https://github.com/user-attachments/assets/8b84df4b-2e6b-4391-bd14-baeb8e463669
 
@@ -94,6 +96,18 @@ YaMusic Downloader PRO спроектирован с учетом сложной
 1. Расширение функционирует **только при наличии активной оплаченной подписки** пользователя на сервис Яндекс Музыка. Оно не обходит защиту от неоплаченного доступа (paywall).
 2. Разработчик расширения **не несет ответственности** за любые прямые или косвенные последствия использования данного ПО. Вся ответственность за использование скачанных материалов лежит на конечном пользователе.
 3. Категорически запрещается использовать данное расширение для пиратства, коммерческого распространения или нарушения авторских прав создателей музыкальных произведений. Сохраненные файлы предназначены исключительно для локального офлайн-прослушивания владельцем подписки.
+
+---
+
+## ☕ Поддержать автора
+
+Проект разрабатывается и поддерживается в свободное время. Адаптация расширения под новые обновления интерфейса Яндекса требует регулярного тестирования и отладки кода. 
+
+Если утилита оказалась для вас полезной, работает стабильно и просто делает прослушивание любимой музыки чуточку комфортнее, вы можете сказать автору "спасибо" чашкой виртуального кофе:
+
+👉 **[Поддержать проект на CloudTips (Карты РФ, СБП, T-Pay)](https://pay.cloudtips.ru/p/5647818e)**
+
+*Любая поддержка невероятно мотивирует выпускать обновления быстрее и добавлять новые фичи! Огромное спасибо всем, кто поддерживает Open-Source! 🚀*
 
 ---
 <div align="center">

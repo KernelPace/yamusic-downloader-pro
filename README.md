@@ -5,7 +5,8 @@
 **Мощное, стабильное и умное расширение для скачивания музыки с Яндекс Музыки в браузере Google Chrome.**
 
 [![Version](https://img.shields.io/badge/Версия-1.0.0-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
-[![Chrome](https://img.shields.io/badge/Chrome-Extension-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/KernelPace/yamusic-downloader-pro)
+[![Chromium](https://img.shields.io/badge/Chrome_|_Edge_|_Yandex_|_Opera-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/KernelPace/yamusic-downloader-pro)
+[![Firefox](https://img.shields.io/badge/Firefox-FF7139.svg?style=for-the-badge&logo=firefox-browser)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![License](https://img.shields.io/badge/Лицензия-MIT-orange.svg?style=for-the-badge)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/KernelPace/yamusic-downloader-pro/total.svg?style=for-the-badge&color=brightgreen)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
 [![Stars](https://img.shields.io/github/stars/KernelPace/yamusic-downloader-pro.svg?style=for-the-badge&color=yellow)](https://github.com/KernelPace/yamusic-downloader-pro/stargazers)
@@ -40,19 +41,28 @@ YaMusic Downloader PRO спроектирован с учетом сложной
 
 ---
 
-## 📦 Инструкция по установке
+## 📦 Инструкция по установке (ровно 1 минута)
 
-Расширение обладает продвинутым техническим функционалом и устанавливается в режиме разработчика. Это занимает ровно 1 минуту.
+Расширения нет в официальных магазинах (из-за строгих политик корпораций к загрузчикам), поэтому оно устанавливается вручную:
 
-> ⚠️ **ОЧЕНЬ ВАЖНО:** Распакуйте скачанный архив в надёжное постоянное место (например, в папку `Документы/YaMusicDownloader` или на диск `D:\`), **откуда вы не будете его удалять**. Chrome читает файлы прямо из вашей папки. Если вы удалите её — расширение перестанет работать!
+### 🌐 Для Chrome, Edge, Яндекс Браузера и Opera
 
-1. Перейдите в раздел **[Releases](../../releases)** и скачайте архив `yamusic-downloader-pro.zip`.
+> ⚠️ **ОЧЕНЬ ВАЖНО:** Распакуйте скачанный архив в надежное постоянное место (например, в папку `Документы/YaMusicDownloader` или на диск `D:\`), **откуда вы не будете его удалять**. Браузер читает файлы прямо из вашей папки. Если вы удалите ее – расширение перестанет работать!
+
+1. Скачайте архив `yamusic-downloader-pro.zip` из раздела **[Releases](../../releases)**.
 2. **Распакуйте архив** в безопасную папку (см. предупреждение выше).
-3. Откройте Google Chrome и введите в адресную строку: `chrome://extensions/`
-4. В правом верхнем углу включите тумблер **«Режим разработчика»** (Developer mode).
-5. Нажмите кнопку **«Загрузить распакованное расширение»** (Load unpacked) в левом верхнем углу.
-6. Выберите папку, в которую вы распаковали архив.
-7. 🎉 **Готово!** Расширение установлено. Нажмите на иконку «Пазла» 🧩 (Расширения) в правом верхнем углу Chrome и нажмите на иконку «Скрепки» 📌 рядом с YaMusic Downloader PRO, чтобы закрепить его на панели. После этого откройте Яндекс Музыку и **нажмите F5** для обновления страницы.
+3. В браузере откройте страницу расширений: `chrome://extensions/`
+4. В правом верхнем углу включите тумблер **"Режим разработчика"** (Developer mode).
+5. Нажмите кнопку **"Загрузить распакованное расширение"** (Load unpacked) и выберите вашу папку.
+6. Нажмите на иконку "Пазла" 🧩 (Расширения) в правом верхнем углу браузера и нажмите на иконку "Скрепки" 📌 рядом с YaMusic Downloader PRO, чтобы закрепить его на панели.
+
+### 🦊 Для Firefox (Официальная подпись Mozilla)
+
+1. Скачайте файл `yamusic-downloader-pro.xpi` из раздела **[Releases](../../releases)**.
+2. Откройте Firefox и просто **перетащите** скачанный файл мышкой прямо в открытое окно браузера (или нажмите `Ctrl+O` на клавиатуре и выберите этот файл).
+3. Нажмите "Добавить" во всплывающем окне. Расширение установится как полноценное дополнение и не исчезнет после перезапуска браузера! (Скачанный файл .xpi после этого можно удалить).
+
+**🎉 Готово!** Зайдите на Яндекс Музыку и нажмите **F5** для обновления страницы.
 
 ---
 

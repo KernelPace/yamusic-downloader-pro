@@ -4,7 +4,7 @@
 
 **Мощное, стабильное и умное расширение для скачивания музыки с Яндекс Музыки в браузере Google Chrome.**
 
-[![Version](https://img.shields.io/badge/Версия-1.0.0-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
+[![Version](https://img.shields.io/badge/Версия-1.1.0-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
 [![Chromium](https://img.shields.io/badge/Chrome_|_Edge_|_Yandex_|_Opera-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![Firefox](https://img.shields.io/badge/Firefox-FF7139.svg?style=for-the-badge&logo=firefox-browser)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![License](https://img.shields.io/badge/Лицензия-MIT-orange.svg?style=for-the-badge)](LICENSE)

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YaMusic Downloader PRO",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Скачивание MP3 (320kbps) с правильными именами и API-управление лайками.",
   "permissions": [
     "downloads",
@@ -14,37 +14,44 @@
     "https://api.music.yandex.ru/*",
     "https://*.storage.yandex.net/*",
     "https://storage.mds.yandex.net/*",
-    "https://*.yandex.ru/*"
+    "https://*.yandex.ru/*",
+    "https://*.yandex.net/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Управление треком"
   },
   "options_page": "options.html",
-"content_scripts": [
-  {
-    "matches": [
-      "https://music.yandex.ru/",
-      "https://music.yandex.ru/*"
-    ],
-    "js": ["button-config.js", "content.js"],
-    "run_at": "document_idle"
-  },
-  {
-    "matches": [
-      "https://music.yandex.ru/",
-      "https://music.yandex.ru/*"
-    ],
-    "js": ["vibe-interceptor.js"],
-    "run_at": "document_start",
-    "world": "MAIN"
-  }
-],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://music.yandex.ru/",
+        "https://music.yandex.ru/*"
+      ],
+      "js": ["button-config.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["vibe-interceptor.js"],
+      "matches": ["https://music.yandex.ru/*"]
+    }
+  ],
   "icons": {
-    "48": "icon.png",
     "128": "icon.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "yamusicpro@kernelpace.github.io",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
   }
 }

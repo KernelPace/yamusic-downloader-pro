@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
   // Ищем сначала АКТИВНУЮ вкладку Яндекса
   chrome.tabs.query({ url: "*://music.yandex.ru/*", active: true, currentWindow: true }, (tabs) => {
     if (tabs.length === 0) {
       chrome.tabs.query({ url: "*://music.yandex.ru/*" }, (allTabs) => {
         if (allTabs.length === 0) {
-          document.getElementById('error-msg').style.display = 'block';
+          document.getElementById('error-msg').classList.add('show');
           return;
         }
         const sorted = allTabs.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
@@ -56,19 +57,77 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     };
 
-    // Первичная загрузка
-    chrome.tabs.sendMessage(ymTab.id, { action: "GET_PLAYER_STATE" }, (res) => {
-      if (chrome.runtime.lastError || !res || !res.trackId) {
-        document.getElementById('error-msg').style.display = 'block';
-        return;
-      }
-      updateUI();
-    });
+    // Первичная загрузка (с умной задержкой)
+    const initPlayer = (retry = false) => {
+      chrome.tabs.sendMessage(ymTab.id, { action: "GET_PLAYER_STATE" }, (res) => {
+        if (chrome.runtime.lastError || !res || !res.trackId) {
+          if (!retry) {
+            // Плеер еще не отрендерился, ждем 500мс и пробуем снова (скрыто от юзера)
+            setTimeout(() => initPlayer(true), 500);
+          } else {
+            // Если и со второго раза пусто — показываем ошибку
+            document.getElementById('error-msg').classList.add('show');
+          }
+          return;
+        }
+        updateUI();
+      });
+    };
+    initPlayer();
+
+    let errorHideTimer = null;
+    let isPlayBtnLocked = false;
 
     playBtn.addEventListener('click', () => {
+      if (isPlayBtnLocked) return;
+      isPlayBtnLocked = true;
+
+      const wasPlaying = (playIcon.style.display === 'none');
+      setPlayIconState(!wasPlaying); // Оптимистично меняем иконку сразу
+
       chrome.tabs.sendMessage(ymTab.id, { action: "PLAYER_CONTROL", control: "play" });
-      const isNowPlaying = (playIcon.style.display === 'block');
-      setPlayIconState(isNowPlaying);
+
+      if (isFirefox && !wasPlaying) {
+        let attempts = 0;
+        // Следим за плеером 2 секунды (5 проверок каждые 400мс)
+        const checkTimer = setInterval(() => {
+          attempts++;
+          chrome.tabs.sendMessage(ymTab.id, { action: "GET_PLAYER_STATE" }, (newState) => {
+            if (chrome.runtime.lastError || !newState) {
+              clearInterval(checkTimer);
+              isPlayBtnLocked = false;
+              return;
+            }
+
+            // Если плеер "сдался" и откатился в Паузу
+            if (!newState.isPlaying) {
+              clearInterval(checkTimer);
+              isPlayBtnLocked = false;
+              setPlayIconState(false); // Возвращаем иконку на Play
+              
+              const errorMsg = document.getElementById('error-msg');
+              errorMsg.innerHTML = "Сделайте <b>один клик</b> мышкой на странице Яндекс Музыки для активации плеера.";
+              errorMsg.classList.add('show');
+              if (errorHideTimer) clearTimeout(errorHideTimer);
+              errorHideTimer = setTimeout(() => { errorMsg.classList.remove('show'); }, 4000);
+            } 
+            // Если стабильно проиграло все 2 секунды
+            else if (attempts >= 5) {
+              clearInterval(checkTimer);
+              isPlayBtnLocked = false;
+              setPlayIconState(true);
+            }
+          });
+        }, 400);
+      } else {
+        // Обычная логика для Chrome или если мы просто нажали Паузу
+        setTimeout(() => {
+          chrome.tabs.sendMessage(ymTab.id, { action: "GET_PLAYER_STATE" }, (newState) => {
+            isPlayBtnLocked = false;
+            if (!chrome.runtime.lastError && newState) setPlayIconState(newState.isPlaying);
+          });
+        }, 400);
+      }
     });
 
     const handleTrackChange = (controlAction) => {
@@ -124,4 +183,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (artistEl && msg.artist) artistEl.textContent = msg.artist;
       }
     });
+    // --- ПРОВЕРКА ОБНОВЛЕНИЙ И ОТОБРАЖЕНИЕ ВЕРСИИ ---
+    const currentVersion = chrome.runtime.getManifest().version;
+    document.getElementById('app-version').textContent = `v${currentVersion}`;
+
+    fetch('https://api.github.com/repos/KernelPace/yamusic-downloader-pro/releases/latest')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.tag_name) {
+          const latestVersion = data.tag_name.replace(/^v/, ''); 
+          
+          // Умная функция сравнения версий (например: 1.1.0 > 1.0.1)
+          const isNewer = (local, github) => {
+            const v1 = local.split('.').map(Number);
+            const v2 = github.split('.').map(Number);
+            for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+              const num1 = v1[i] || 0;
+              const num2 = v2[i] || 0;
+              if (num2 > num1) return true;
+              if (num2 < num1) return false;
+            }
+            return false;
+          };
+
+          if (isNewer(currentVersion, latestVersion)) {
+            const banner = document.getElementById('update-banner');
+            document.getElementById('new-version-num').textContent = data.tag_name;
+            banner.style.display = 'block';
+            document.getElementById('app-version').style.color = '#FF9500';
+          }
+        }
+      })
+      .catch(err => console.warn('Не удалось проверить обновления:', err));
 });

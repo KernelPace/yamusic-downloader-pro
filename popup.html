@@ -5,12 +5,21 @@
   <style>
     /* Базовые настройки окна */
     body {
-      margin: 0;
-      padding: 0;
-      width: 320px;
+      margin: 0; padding: 0; width: 320px;
+      min-height: 120px; /* ДАЕМ МЕСТО ДЛЯ ОШИБКИ ПРИ СТАРТЕ */
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #fff; position: relative;
+      overflow: hidden; /* ЗАЩИТА ОТ СКРОЛЛБАРОВ */
+    }
+	
+	/* Кастомное выделение текста под стиль бренда */
+    ::selection {
+      background: rgba(255, 204, 0, 0.3); /* Фирменный желтый с прозрачностью */
       color: #fff;
-      position: relative;
+    }
+    ::-moz-selection {
+      background: rgba(255, 204, 0, 0.3);
+      color: #fff;
     }
 
     /* Размытый фон (на весь экран) */
@@ -28,24 +37,11 @@
     #content-wrapper {
       position: relative;
       z-index: 2;
-      padding: 20px;
+      padding: 20px 20px 12px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       box-sizing: border-box;
-    }
-
-    #error-msg { 
-      display: none; 
-      color: #ff8888; 
-      text-align: center; 
-      font-size: 14px; 
-      line-height: 1.5;
-      user-select: text !important;
-      background: rgba(0,0,0,0.6);
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 10px;
     }
 
     #player { 
@@ -59,16 +55,17 @@
        БЛОК 1: ПУЛЬТ УПРАВЛЕНИЯ (НАВЕРХУ)
        ========================================= */
     .control-panel {
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.85); /* СДЕЛАЛИ ЯВНО ТЕМНЕЕ */
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.15); 
+      border-radius: 22px;
       width: 100%;
       padding: 18px 20px;
       box-sizing: border-box;
       margin-bottom: 24px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      backdrop-filter: blur(20px) saturate(120%);
+      -webkit-backdrop-filter: blur(20px) saturate(120%);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
     }
 
     /* Переключение треков (верхний ряд в пульте) */
@@ -105,12 +102,13 @@
     /* Кнопка Плей/Пауза */
     .btn-main {
       background: #ffcc00; color: #000; border-radius: 50%;
-      width: 52px; height: 52px;
-      box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+      width: 54px; height: 54px;
+      /* Двойная тень: одна жесткая вниз, вторая - мягкое широкое свечение */
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3), 0 0 25px rgba(255, 204, 0, 0.25);
     }
     .btn-main:hover {
       background: #ffe066; color: #000;
-      box-shadow: 0 6px 20px rgba(255, 204, 0, 0.6);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.4), 0 0 35px rgba(255, 204, 0, 0.35);
     }
     .btn-main svg { width: 24px; height: 24px; fill: currentColor; }
 
@@ -127,16 +125,16 @@
     
     #btn-like.liked svg { fill: #ff3333; stroke: #ff3333; }
 
-    /* =========================================
-       БЛОК 2: ИНФОРМАЦИЯ О ТРЕКЕ (ВНИЗУ)
-       ========================================= */
+    /* Обложка */
     .cover {
-      width: 140px;
-      height: 140px;
+      width: 150px;
+      height: 150px;
       border-radius: 12px;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       object-fit: cover;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      /* Тончайшая рамка + глубокая многослойная тень */
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 32px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.3);
     }
 
     .title, .artist {
@@ -167,13 +165,105 @@
     }
 
     @keyframes ym-dl-spin { 100% { transform: rotate(360deg); } }
+    /* =========================================
+       БЛОК 3: ПОДВАЛ (ВЕРСИЯ И ДОНАТ)
+       ========================================= */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      margin-top: 5px; /* УБРАЛИ ДЫРУ (было 20px) */
+      padding-top: 12px; 
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+    .version {
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 500;
+      letter-spacing: 0.5px;
+    }
+    .donate-btn {
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      font-weight: 600;
+    }
+    .donate-btn:hover {
+      background: rgba(255, 204, 0, 0.15);
+      color: #ffcc00;
+      transform: translateY(-1px);
+    }
+    .donate-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* =========================================
+       СИСТЕМНЫЕ УВЕДОМЛЕНИЯ
+       ========================================= */
+    #update-banner {
+      display: none;
+      width: 100%;
+      box-sizing: border-box; /* ИМЕННО ЭТО ИСПРАВЛЯЕТ СМЕЩЕНИЕ */
+      background: rgba(20, 20, 20, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 204, 0, 0.25);
+      padding: 6px 12px; /* Вернули минимальную высоту */
+      text-align: center;
+      text-decoration: none;
+      color: #ffcc00;
+      font-size: 12px;
+      font-weight: 500;
+      position: relative;
+      z-index: 10;
+    }
+    #update-banner:hover { background: rgba(30, 30, 30, 0.8); }
+    
+	#error-msg { 
+      position: absolute;
+      top: -50px; left: 50%;
+      transform: translateX(-50%);
+      width: 85%;
+      background: rgba(20, 20, 20, 0.85);
+      border: 1px solid rgba(255, 80, 80, 0.4);
+      color: #ff8888;
+      text-align: center;
+      font-size: 13px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 999;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    /* Класс для плавного выезда ошибки */
+    #error-msg.show {
+      top: 20px;
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
   <div id="bg-blur"></div>
+  
+  <!-- ТОНКИЙ БАННЕР ОБНОВЛЕНИЯ ВЕРХУ -->
+  <a href="https://github.com/KernelPace/yamusic-downloader-pro/releases/latest" target="_blank" id="update-banner">
+    ✨ Доступна новая версия: <span id="new-version-num"></span> (Нажмите для скачивания)
+  </a>
+
+  <!-- ВСПЛЫВАЮЩЕЕ СООБЩЕНИЕ ПОВЕРХ ВСЕГО -->
+  <div id="error-msg">Пожалуйста, <b>обновите вкладку</b> Яндекс Музыки (F5) или включите трек.</div>
 
   <div id="content-wrapper">
-    <div id="error-msg">Пожалуйста, <b>обновите вкладку</b> Яндекс Музыки (нажмите F5) или включите воспроизведение любого трека.</div>
     
     <div id="player">
       
@@ -212,6 +302,15 @@
       
       <div id="title" class="title">Загрузка...</div>
       <div id="artist" class="artist">Яндекс Музыка</div>
+
+      <!-- ПОДВАЛ (ВЕРСИЯ И ДОНАТ) -->
+      <div class="footer">
+        <div class="version" id="app-version">v1.0.0</div>
+        <a href="https://pay.cloudtips.ru/p/5647818e" target="_blank" class="donate-btn" title="Поддержать автора">
+          <svg viewBox="0 0 24 24"><path d="M20 8h-2.1c.06-.32.1-.66.1-1 0-2.76-2.24-5-5-5-1.95 0-3.64 1.11-4.48 2.73C7.68 3.1 6.01 2 4 2 1.24 2 -1 4.24 -1 7c0 .34.04.68.1 1H-3v3h1v10h18V12h1V8zm-11-1c0-1.65 1.35-3 3-3s3 1.35 3 3-1.35 3-3 3-3-1.35-3-3zM1 7c0-1.65 1.35-3 3-3s3 1.35 3 3-1.35 3-3 3-3-1.35-3-3zm16 13H3v-8h14v8zm2-10H-1V9h18v1z"/></svg>
+          Поддержать ☕
+        </a>
+      </div>
 
     </div>
   </div>

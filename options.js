@@ -3,7 +3,7 @@ const statusEl = document.getElementById('status');
 const saveBtn = document.getElementById('save');
 
 // Загрузка сохраненного значения при открытии (по умолчанию '1_Music')
-chrome.storage.sync.get(['subfolder'], (data) => {
+chrome.storage.local.get(['subfolder'], (data) => {
   inputEl.value = data.subfolder !== undefined ? data.subfolder : '1_Music';
 });
 
@@ -11,7 +11,7 @@ chrome.storage.sync.get(['subfolder'], (data) => {
 saveBtn.addEventListener('click', () => {
   const value = inputEl.value.trim();
   
-  chrome.storage.sync.set({ subfolder: value }, () => {
+  chrome.storage.local.set({ subfolder: value }, () => {
     statusEl.textContent = 'Настройки успешно сохранены!';
     setTimeout(() => {
       statusEl.textContent = '';

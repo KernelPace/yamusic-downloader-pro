@@ -1,5 +1,11 @@
 (() => {
   'use strict';
+  
+  // Кроссбраузерное внедрение шпиона в MAIN world
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('vibe-interceptor.js');
+  script.onload = function() { this.remove(); };
+  (document.head || document.documentElement).appendChild(script);
 
   let _vibeCurrentTrackId = null;
   let _recentVibeTracks = [];
@@ -13,7 +19,7 @@
     _recentVibeTracks.push(id);
     if (_recentVibeTracks.length > 10) _recentVibeTracks.shift();
 
-    _vibeCurrentTrackId = id; 
+    _vibeCurrentTrackId = id; 	
     
     const existingVibe = document.querySelector('.ym-dl-btn-vibe');
     if (!existingVibe || existingVibe.dataset.downloading !== 'true') {
@@ -21,8 +27,8 @@
     }
   });
 
-  const cfg = globalThis.YM_DL_BUTTON_CONFIG;
-  if (!cfg) return;
+  const cfg = typeof YM_DL_BUTTON_CONFIG !== 'undefined' ? YM_DL_BUTTON_CONFIG : null;
+  if (!cfg) { console.warn('[YM-DL] Config not found!'); return; }
 
   const { buttons: BTN, selectors: SEL, states: ST } = cfg;
   const MD5_SALT = 'XGRlBW9FXlekgbPrRHuSiA';
@@ -81,6 +87,9 @@
     return null; 
   }
 
+  // ==================================================================
+  // === ЧАСТЬ 1: ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И API ===
+  // ==================================================================
   async function fetchMeta(trackId) {
     const res = await fetch(`${API_BASE}/tracks/${trackId}`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API Error: ${res.status}`);
@@ -96,6 +105,9 @@
     return rawName.replace(/[\/\\?%*:|"<>]/g, '_');
   }
 
+  // ==================================================================
+  // === ЧАСТЬ 3: ЛОГИКА СКАЧИВАНИЯ (ОТПРАВКА В ФОН) ===
+  // ==================================================================
   async function performDownload(trackId, btn = null) {
     const isUI = !!btn;
     // Блокируем множественные клики
@@ -168,9 +180,26 @@
       const sign = md5(MD5_SALT + path.substring(1) + s);
       const directUrl = `https://${host}/get-mp3/${sign}/${ts}${path}`;
 
+      // Собираем данные для передачи в фоновый скрипт
+      const coverUrl = meta.coverUri ? `https://${meta.coverUri.replace('%%', '400x400')}` : null;
+      const artistsStr = (meta.artists || []).map(a => a.name).filter(Boolean).join(', ');
+      const titleStr = meta.title || 'Unknown Title';
+      const albumStr = meta.albums?.length ? meta.albums[0].title : null;
+      const yearStr = meta.albums?.length && meta.albums[0].year ? String(meta.albums[0].year) : null;
+      const genreStr = meta.albums?.length && meta.albums[0].genre ? String(meta.albums[0].genre) : null;
+      
       let resp;
       try {
-        resp = await chrome.runtime.sendMessage({ type: 'YM_DL_DOWNLOAD', payload: { url: directUrl, filename: `${fileName}.mp3` } });
+        // ВАЖНО: Используем строго chrome.runtime.sendMessage для совместимости Chrome и Firefox
+        resp = await chrome.runtime.sendMessage({ 
+          type: 'YM_DL_BUILD_AND_DOWNLOAD', 
+          payload: { 
+            directUrl: directUrl, 
+            coverUrl: coverUrl,
+            tags: { title: titleStr, artist: artistsStr, album: albumStr, year: yearStr, genre: genreStr },
+            filename: `${fileName}.mp3` 
+          } 
+        });
       } catch (e) {
         if (e.message.includes('Extension context invalidated')) {
           alert('Расширение обновлено.\nНажмите F5 на вкладке Я.Музыки.');
@@ -521,15 +550,19 @@
       }
 
       // 1. БЫСТРЫЙ СБОР: Берем то, что есть на экране (занимает 0.001 секунды)
-      let domTitle = '';
-      if (vibeBar) {
-        const titleEl = vibeBar.querySelector('[class*="VibePlayerbarMeta_trackNameText"]');
-        domTitle = titleEl ? titleEl.textContent.trim() : 'Трек Моей Волны';
-      } else {
-        domTitle = playerBar.querySelector(SEL.playerTitle)?.textContent?.trim() || '';
-      }
-
+      let domTitle = vibeBar ? (vibeBar.querySelector('[class*="VibePlayerbarMeta_trackNameText"]')?.textContent.trim() || 'Трек Моей Волны') : (playerBar.querySelector(SEL.playerTitle)?.textContent?.trim() || '');
       let domArtist = extractArtists(activeBar);
+
+      // Умное разделение строки "Артист — Песня" для спящего плеера Моей Волны
+      if (vibeBar && domArtist === 'Яндекс Музыка') {
+        // Яндекс может использовать длинное тире " — " или короткое " - "
+        const separator = domTitle.includes(' — ') ? ' — ' : (domTitle.includes(' - ') ? ' - ' : null);
+        if (separator) {
+          const parts = domTitle.split(separator);
+          domArtist = parts[0].trim();
+          domTitle = parts.slice(1).join(separator).trim(); // slice спасает, если в самом названии тоже есть тире
+        }
+      }
 
       let cover = activeBar.querySelector('img')?.src || '';
       if (cover) cover = cover.replace(/\d+x\d+$/, '200x200');

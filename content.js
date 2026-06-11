@@ -9,6 +9,26 @@
 
   let _vibeCurrentTrackId = null;
   let _recentVibeTracks = [];
+  const _metaCache = {}; // Наш мгновенный кэш
+
+  document.addEventListener('ym-dl-track-id', (e) => {
+    if (!e.detail) return;
+    const id = String(e.detail);
+    
+    _recentVibeTracks = _recentVibeTracks.filter(x => x !== id);
+    _recentVibeTracks.push(id);
+    if (_recentVibeTracks.length > 10) _recentVibeTracks.shift();
+
+    _vibeCurrentTrackId = id; 	
+    
+    // ПРЕКЭШИРОВАНИЕ: Асинхронно скачиваем теги ДО того, как юзер откроет окно!
+    fetchMeta(id).catch(()=>{});
+
+    const existingVibe = document.querySelector('.ym-dl-btn-vibe');
+    if (!existingVibe || existingVibe.dataset.downloading !== 'true') {
+      setTimeout(() => injectVibePlayerButton(), 200);
+    }
+  });
 
   document.addEventListener('ym-dl-track-id', (e) => {
     if (!e.detail) return;
@@ -49,38 +69,41 @@
     }
   }, 300);
 
-  // --- УМНЫЙ АЛГОРИТМ ПОИСКА ИГРАЮЩЕГО ТРЕКА ---
-  async function getExactVibeTrackId(domTitle, domArtist) {
-    if (!domTitle) return null;
-    const searchTitle = domTitle.toLowerCase().trim();
+  // --- УМНЫЙ АЛГОРИТМ ПОИСКА ИГРАЮЩЕГО ТРЕКА (Теперь с обложкой) ---
+  async function getExactVibeTrackId(domTitle, domArtist, domCover = '') {
+    const searchTitle = (domTitle || '').toLowerCase().trim();
 
-    // 1. Ищем точное совпадение в истории (решает проблему прелоадов)
     if (_recentVibeTracks.length > 0) {
       const ids = [..._recentVibeTracks].reverse(); 
       for (const id of ids) {
         try {
           const meta = await fetchMeta(id);
+          
+          // 1. СВЕРХНАДЕЖНЫЙ МЕТОД: Сравниваем обложки (отсекает прелоады)
+          if (domCover && meta.coverUri) {
+            const apiCoverBase = meta.coverUri.replace('%%', '');
+            if (domCover.includes(apiCoverBase)) return id;
+          }
+
+          // 2. Резерв: Совпадение по тексту
           const metaTitle = (meta.title || '').toLowerCase().trim();
-          if (metaTitle === searchTitle || metaTitle.includes(searchTitle) || searchTitle.includes(metaTitle)) {
+          if (searchTitle && (metaTitle === searchTitle || metaTitle.includes(searchTitle) || searchTitle.includes(metaTitle))) {
             return id;
           }
         } catch(e) {}
       }
     }
     
-    // 2. Если история пуста, ищем через официальный Поиск Яндекса
+    // Фоллбэк: Поиск через API
     try {
       const cleanArtist = (domArtist === 'Яндекс Музыка') ? '' : domArtist;
-      const query = encodeURIComponent(`${cleanArtist} ${domTitle}`.trim());
+      const query = encodeURIComponent(`${cleanArtist} ${searchTitle}`.trim());
+      if (!query) return null;
       const res = await fetch(`${API_BASE}/search?text=${query}&type=track`, { credentials: 'include' });
-      
       if (res.ok) {
         const json = await res.json();
         const track = json?.result?.tracks?.results?.[0];
-        if (track && track.id) {
-          console.log('[YM-DL] 🔍 Трек найден через Search API:', track.id);
-          return String(track.id);
-        }
+        if (track && track.id) return String(track.id);
       }
     } catch(e) {}
     
@@ -91,10 +114,14 @@
   // === ЧАСТЬ 1: ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ И API ===
   // ==================================================================
   async function fetchMeta(trackId) {
+    // Если трек уже в памяти, отдаем его моментально!
+    if (_metaCache[trackId]) return _metaCache[trackId];
+    
     const res = await fetch(`${API_BASE}/tracks/${trackId}`, { credentials: 'include' });
     if (!res.ok) throw new Error(`API Error: ${res.status}`);
     const json = await res.json();
-    return json.result[0];
+    _metaCache[trackId] = json.result[0];
+    return _metaCache[trackId];
   }
 
   function buildFileName(meta) {
@@ -183,7 +210,9 @@
       // Собираем данные для передачи в фоновый скрипт
       const coverUrl = meta.coverUri ? `https://${meta.coverUri.replace('%%', '400x400')}` : null;
       const artistsStr = (meta.artists || []).map(a => a.name).filter(Boolean).join(', ');
-      const titleStr = meta.title || 'Unknown Title';
+      // Грамотно добавляем версию в скобках, если она есть
+      const versionStr = meta.version ? ` (${meta.version})` : '';
+      const titleStr = (meta.title || 'Unknown Title') + versionStr;
       const albumStr = meta.albums?.length ? meta.albums[0].title : null;
       const yearStr = meta.albums?.length && meta.albums[0].year ? String(meta.albums[0].year) : null;
       const genreStr = meta.albums?.length && meta.albums[0].genre ? String(meta.albums[0].genre) : null;
@@ -396,14 +425,16 @@
       const domTitle = titleEl ? titleEl.textContent.trim() : '';
       const artistEl = vibeBar.querySelector('[class*="artist"], [class*="ArtistName"], [class*="VibePlayerbarMeta_author"]');
       const domArtist = artistEl ? artistEl.textContent.trim() : '';
+      const imgEl = vibeBar.querySelector('img');
+      const domCover = imgEl ? imgEl.src : '';
 
-      // Фаза 1: Ставим локальный флаг "поиск", чтобы крутить спиннер, но не блокировать саму функцию скачивания!
       const prevHtml = btn.innerHTML;
       btn.innerHTML = ST.loading; 
       btn.dataset.searching = 'true'; 
       btn.style.cursor = 'wait';
 
-      const id = await getExactVibeTrackId(domTitle, domArtist);
+      // Теперь передаем и обложку для супер-точного поиска!
+      const id = await getExactVibeTrackId(domTitle, domArtist, domCover);
       
       // Фаза 2: Снимаем флаг поиска, теперь работает сама функция performDownload
       btn.innerHTML = prevHtml;
@@ -579,11 +610,30 @@
       });
       const isPlaying = !!playBtn;
 
-      let trackId = vibeBar ? (document.body.dataset.ymVibeId || _vibeCurrentTrackId) : extractTrackId(playerBar);
+      // ЖЕСТКИЙ ФИКС: Для Моей Волны обнуляем ID, чтобы игнорировать "прелоады" (следующие песни)
+      let trackId = vibeBar ? 'vibe-active' : extractTrackId(playerBar);
 
-      // ⚡ МГНОВЕННЫЙ ОТВЕТ: Открываем окно Popup без ожидания сети!
+      // ИНСТАНТ-КЭШ ДЛЯ МОЕЙ ВОЛНЫ (Убирает моргание)
+      if (vibeBar && cover) {
+        for (const id of [..._recentVibeTracks].reverse()) {
+          const meta = _metaCache[id];
+          if (meta && meta.coverUri) {
+            const apiCoverBase = meta.coverUri.replace('%%', '');
+            if (cover.includes(apiCoverBase)) {
+              // Идеальное совпадение обложек найдено прямо в оперативной памяти!
+              const versionStr = meta.version ? ` (${meta.version})` : '';
+              domTitle = (meta.title || domTitle) + versionStr;
+              domArtist = (meta.artists || []).map(a => a.name).filter(Boolean).join(', ') || domArtist;
+              trackId = id; // Закрепляем точный ID
+              break;
+            }
+          }
+        }
+      }
+
+      // Синхронный ответ (мгновенно открывает окно)
       sendResponse({ 
-        trackId: trackId || 'vibe-active', 
+        trackId: trackId, 
         title: domTitle, 
         artist: domArtist, 
         cover, 
@@ -591,28 +641,40 @@
         isLiked 
       });
 
-      // 2. ФОНОВАЯ МАГИЯ: Запрашиваем полные имена через API и отправляем вдогонку
+      // Асинхронная магия (находит правильный трек и обновляет текст)
       (async () => {
-        if (vibeBar && (!trackId || trackId === 'vibe-active')) {
-          const exactId = await getExactVibeTrackId(domTitle, domArtist);
+        if (vibeBar) {
+          // ВСЕГДА ищем ID по картинке, игнорируя прелоады
+          const exactId = await getExactVibeTrackId(domTitle, domArtist, cover);
           if (exactId) trackId = exactId;
         }
 
         if (trackId && trackId !== 'vibe-active') {
           try {
             const meta = await fetchMeta(trackId);
-            const apiTitle = (meta.title || '').toLowerCase().trim();
-            const apiArtist = (meta.artists || []).map(a => a.name).join(' ').toLowerCase();
-            const apiText = `${apiTitle} ${apiArtist}`;
-            const screenText = `${domTitle} ${domArtist}`.toLowerCase();
+            const versionStr = meta.version ? ` (${meta.version})` : '';
+            const finalTitle = (meta.title || domTitle) + versionStr;
+            const finalArtist = (meta.artists || []).map(a => a.name).filter(Boolean).join(', ') || domArtist;
 
-            const isCorrectTrack = screenText.includes(apiTitle) || apiText.includes(domTitle.toLowerCase().trim());
+            let isCorrectTrack = false;
+            
+            if (vibeBar) {
+              isCorrectTrack = true; // В Моей Волне, если мы нашли ID, значит картинка уже совпала на 100%
+            } else {
+              if (cover && meta.coverUri) {
+                const apiCoverBase = meta.coverUri.replace('%%', '');
+                isCorrectTrack = cover.includes(apiCoverBase);
+              }
+            
+            // Проверка по тексту (резерв)
+              if (!isCorrectTrack) {
+                const apiTitle = (meta.title || '').toLowerCase().trim();
+                const screenText = `${domTitle} ${domArtist}`.toLowerCase();
+                isCorrectTrack = screenText.includes(apiTitle) || apiTitle.includes((domTitle || '').toLowerCase().trim());
+              }
+            }
 
             if (isCorrectTrack) {
-              const finalTitle = meta.title || domTitle;
-              const finalArtist = (meta.artists || []).map(a => a.name).filter(Boolean).join(', ') || domArtist;
-              
-              // Отправляем сообщение открытому Popup-у: "Обнови текст на красивый!"
               chrome.runtime.sendMessage({
                 action: "UPDATE_POPUP_META",
                 title: finalTitle,
@@ -625,6 +687,89 @@
       
       // Возвращаем false, так как мы уже ответили синхронно и мгновенно
       return false; 
+    }
+	
+    if (msg.action === "GET_PROGRESS") {
+      let position = 0;
+      let duration = 0;
+
+      // Универсальный поиск: ищем любой видимый ползунок, который НЕ является громкостью
+      const ranges = Array.from(document.querySelectorAll('input[type="range"]'));
+      const timeSlider = ranges.find(el => {
+        const cls = (el.className || '').toLowerCase();
+        return !cls.includes('volume') && el.getBoundingClientRect().width > 0;
+      });
+
+      if (timeSlider) {
+        // Блестяще: берем точное время напрямую из ползунка! Никакого парсинга текста.
+        position = parseFloat(timeSlider.value) || 0;
+        duration = parseFloat(timeSlider.max) || 0;
+      } else {
+        // Фоллбэк: старый метод чтения текста с экрана (на случай, если Яндекс спрячет ползунок)
+        const selectors = '[class*="PlayerBarDesktop"], [class*="VibePlayerbar"], [class*="VibePlayerBar"], [class*="DefaultLayout_rootNewVibe"]';
+        const bar = Array.from(document.querySelectorAll(selectors)).find(el => el.getBoundingClientRect().width > 0);
+        if (bar) {
+          const timeNodes = Array.from(bar.querySelectorAll('*')).filter(el => el.childNodes.length === 1 && /^(?:\d+:)?\d+:\d{2}$/.test(el.textContent.trim()));
+          if (timeNodes.length >= 2) {
+            const parseTime = (str) => { 
+              const p = str.trim().split(':').map(Number);
+              return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p[0] * 60 + p[1];
+            };
+            const val1 = parseTime(timeNodes[0].textContent);
+            const val2 = parseTime(timeNodes[timeNodes.length - 1].textContent);
+            duration = Math.max(val1, val2);
+            position = Math.min(val1, val2);
+          }
+        }
+      }
+	  
+      // Узнаем обложку для авто-обновления Popup
+      let cover = '';
+      const activeBar = Array.from(document.querySelectorAll('[class*="PlayerBarDesktop"], [class*="VibePlayerBar"]')).find(el => el.getBoundingClientRect().width > 0);
+      if (activeBar) {
+        cover = activeBar.querySelector('img')?.src || '';
+      }
+
+      sendResponse({ position, duration, cover });
+      return false; // Отвечаем мгновенно
+    }
+
+    if (msg.action === "SEEK") {
+      const targetSec = Math.round(parseFloat(msg.position)).toString();
+
+      // Находим все видимые ползунки времени (и в нижнем плеере, и в Моей Волне)
+      const ranges = Array.from(document.querySelectorAll('input[type="range"]'));
+      const timeSliders = ranges.filter(el => {
+        const cls = (el.className || '').toLowerCase();
+        return !cls.includes('volume') && el.getBoundingClientRect().width > 0;
+      });
+
+      // Перематываем ВСЕ найденные активные плееры сразу
+      timeSliders.forEach(timeSlider => {
+        // Хак обхода защиты React
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        nativeInputValueSetter.call(timeSlider, targetSec);
+
+        // Эмулируем стандартные события
+        timeSlider.dispatchEvent(new Event('input', { bubbles: true }));
+        timeSlider.dispatchEvent(new Event('change', { bubbles: true }));
+
+        // Вызов внутренней функции React
+        const propKey = Object.keys(timeSlider).find(k => k.startsWith('__reactProps$'));
+        if (propKey && timeSlider[propKey] && timeSlider[propKey].onChange) {
+          try {
+            timeSlider[propKey].onChange({ 
+              target: timeSlider, 
+              currentTarget: timeSlider, 
+              preventDefault: () => {}, 
+              stopPropagation: () => {} 
+            });
+          } catch (e) {}
+        }
+      });
+      
+      sendResponse({ ok: true });
+      return false;
     }
 
     if (msg.action === "TOGGLE_LIKE") {
@@ -641,6 +786,22 @@
       } catch (err) {
         sendResponse({ ok: false, error: err.message });
       }
+      return true;
+    }
+	
+    if (msg.action === "DISLIKE_CURRENT") {
+      try {
+        const activeBar = vibeBar || playerBar;
+        // Ищем кнопку дизлайка по точному совпадению
+        const btn = activeBar ? Array.from(activeBar.querySelectorAll('button')).find(b => {
+          const label = (b.getAttribute('aria-label') || '').toLowerCase().trim();
+          // Добавили все возможные варианты, которые использует Яндекс
+          return label === 'не нравится' || label === 'больше не нравится' || label === 'не рекомендовать';
+        }) : null;
+
+        if (btn) btn.click();
+      } catch (err) {}
+      sendResponse({ ok: true });
       return true;
     }
 

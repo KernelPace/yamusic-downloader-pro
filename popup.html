@@ -5,7 +5,7 @@
   <style>
     /* Базовые настройки окна */
     body {
-      margin: 0; padding: 0; width: 320px;
+      margin: 0; padding: 0; width: 340px;
       min-height: 120px; /* ДАЕМ МЕСТО ДЛЯ ОШИБКИ ПРИ СТАРТЕ */
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: #fff; position: relative;
@@ -77,13 +77,31 @@
       margin-bottom: 16px;
     }
 
-    /* Действия (нижний ряд в пульте) */
+    /* Действия (нижний ряд в пульте) - ИДЕАЛЬНОЕ ЦЕНТРИРОВАНИЕ */
     .action-controls {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr; /* Центральная колонка по размеру Лайка */
       align-items: center;
-      justify-content: center;
-      gap: 20px;
+      width: 100%;
     }
+    #btn-dislike { justify-self: end; margin-right: 18px; }
+    #btn-like { justify-self: center; }
+    #btn-download { justify-self: start; margin-left: 18px; }
+
+    /* Настоящие кликабельные ссылки */
+    a.clickable {
+      text-decoration: none;
+      display: block;
+      transition: all 0.2s ease;
+	  color: #fff;
+    }
+    a.title:hover, a.artist:hover {
+      text-decoration: underline; /* Подчеркивание текста */
+      color: #ffcc00; /* Фирменный желтый при наведении */
+    }
+    #cover-link { display: block; margin-bottom: 20px; transition: transform 0.2s; }
+    #cover-link:hover { transform: scale(1.03); opacity: 0.85; }
+    #cover-link .cover { margin-bottom: 0; } /* Убираем двойной отступ */
 
     /* Общие стили для кнопок */
     .btn {
@@ -124,6 +142,48 @@
     .btn-action svg { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
     
     #btn-like.liked svg { fill: #ff3333; stroke: #ff3333; }
+	
+    /* Маленькая кнопка Дизлайка */
+    .btn-action-small {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      width: 34px; height: 34px;
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s ease;
+    }
+    .btn-action-small:hover { background: rgba(255, 80, 80, 0.2); color: #ff5050; }
+    .btn-action-small svg { width: 16px; height: 16px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Окно подтверждения дизлайка */
+    #dislike-confirm {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 15, 15, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      border-radius: 22px; /* Подгоняем под форму пульта */
+    }
+    #dislike-confirm.show { display: flex; opacity: 1; }
+    .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 17px; color: #fff; text-align: center; padding: 0 10px; line-height: 1.4; }
+    .confirm-btns { display: flex; gap: 15px; }
+    .confirm-btn {
+      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    }
+    .btn-yes { background: rgba(255, 80, 80, 0.2); color: #ff8888; border: 1px solid rgba(255, 80, 80, 0.4); }
+    .btn-yes:hover { background: rgba(255, 80, 80, 0.4); color: #fff; }
+    .btn-no { background: rgba(255, 255, 255, 0.1); color: #ccc; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .btn-no:hover { background: rgba(255, 255, 255, 0.2); color: #fff; }
+    
+    /* Делаем обложку и текст кликабельными ссылками */
+    .clickable { cursor: pointer; transition: transform 0.2s ease, opacity 0.2s; }
+    .clickable:hover { transform: scale(1.03); opacity: 0.8; }
 
     /* Обложка */
     .cover {
@@ -183,6 +243,14 @@
       font-weight: 500;
       letter-spacing: 0.5px;
     }
+    .settings-btn {
+      background: none; border: none; padding: 0; cursor: pointer;
+      color: rgba(255, 255, 255, 0.4); display: flex; align-items: center;
+      transition: all 0.3s ease; outline: none;
+    }
+    .settings-btn:hover { color: #fff; transform: rotate(90deg); }
+    .settings-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	
     .donate-btn {
       color: rgba(255, 255, 255, 0.7);
       text-decoration: none;
@@ -250,6 +318,64 @@
       opacity: 1;
       pointer-events: auto;
     }
+	
+    /* =========================================
+       БЛОК 4: ПРОГРЕСС-БАР (ПЕРЕМОТКА)
+       ========================================= */
+    .progress-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      margin-top: 7px; /* Отступ от верхних кнопок */
+    }
+    .time-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 4px; /* Отступ между цифрами и линией */
+      padding: 0 2px;
+      box-sizing: border-box;
+    }
+    #time-current, #time-total {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.55);
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.3px;
+    }
+    #progress-bar {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15); /* Чуть светлее для контраста */
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      background-image: linear-gradient(#ffcc00, #ffcc00);
+      background-size: 0% 100%;
+      background-repeat: no-repeat;
+      transition: height 0.2s ease; /* Плавное расширение при наведении */
+    }
+    .progress-container:hover #progress-bar {
+      height: 6px; /* Эффект Apple Music: полоска утолщается под мышкой */
+    }
+    #progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 12px; width: 12px; /* Чуть крупнее кружок */
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    }
+    #progress-bar::-moz-range-thumb {
+      height: 12px; width: 12px; border: none;
+      border-radius: 50%; background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    }
+    .progress-container:hover #progress-bar::-webkit-slider-thumb { opacity: 1; transform: scale(1.1); }
+    .progress-container:hover #progress-bar::-moz-range-thumb { opacity: 1; transform: scale(1.1); }
   </style>
 </head>
 <body>
@@ -286,6 +412,11 @@
         </div>
 
         <div class="action-controls">
+          <!-- КНОПКА ДИЗЛАЙКА -->
+          <button id="btn-dislike" class="btn btn-action-small" title="Больше не рекомендовать">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          </button>
+		
           <button id="btn-like" class="btn btn-action" title="Мне нравится">
             <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
           </button>
@@ -294,18 +425,43 @@
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           </button>
         </div>
+		
+        <!-- ПРОГРЕСС-БАР (ПЕРЕМОТКА) -->
+        <div class="progress-container">
+          <div class="time-row">
+            <span id="time-current">0:00</span>
+            <span id="time-total">0:00</span>
+          </div>
+          <input type="range" id="progress-bar" min="0" max="100" value="0" step="1">
+        </div>
 
       </div>
 
+      <!-- ВСПЛЫВАЮЩЕЕ ОКНО ПОДТВЕРЖДЕНИЯ (Скрыто по умолчанию) -->
+      <div id="dislike-confirm">
+        <div class="confirm-title">Пометить как «Не нравится»?<br><span style="font-size:13px; color:#aaa; font-weight:400">(Трек уберется из рекомендаций и переключится)</span></div>
+        <div class="confirm-btns">
+          <button id="dislike-yes" class="confirm-btn btn-yes">Да, пометить</button>
+          <button id="dislike-no" class="confirm-btn btn-no">Отмена</button>
+        </div>
+      </div>
+
       <!-- НИЖНИЙ БЛОК: КРАСИВАЯ ИНФОРМАЦИЯ -->
-      <img id="cover" class="cover" src="icon.png" alt="Cover">
+      <a id="cover-link" target="_blank" title="Открыть трек">
+        <img id="cover" class="cover clickable" src="icon.png" alt="Cover">
+      </a>
       
-      <div id="title" class="title">Загрузка...</div>
-      <div id="artist" class="artist">Яндекс Музыка</div>
+      <a id="title" class="title clickable" target="_blank" title="Открыть трек">Загрузка...</a>
+      <a id="artist" class="artist clickable" target="_blank" title="Искать артиста">Яндекс Музыка</a>
 
       <!-- ПОДВАЛ (ВЕРСИЯ И ДОНАТ) -->
       <div class="footer">
-        <div class="version" id="app-version">v1.0.0</div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="version" id="app-version">v1.2.0</div>
+          <button id="btn-settings" class="settings-btn" title="Настройки (папка загрузок)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+        </div>
         <a href="https://pay.cloudtips.ru/p/5647818e" target="_blank" class="donate-btn" title="Поддержать автора">
           <svg viewBox="0 0 24 24"><path d="M20 8h-2.1c.06-.32.1-.66.1-1 0-2.76-2.24-5-5-5-1.95 0-3.64 1.11-4.48 2.73C7.68 3.1 6.01 2 4 2 1.24 2 -1 4.24 -1 7c0 .34.04.68.1 1H-3v3h1v10h18V12h1V8zm-11-1c0-1.65 1.35-3 3-3s3 1.35 3 3-1.35 3-3 3-3-1.35-3-3zM1 7c0-1.65 1.35-3 3-3s3 1.35 3 3-1.35 3-3 3-3-1.35-3-3zm16 13H3v-8h14v8zm2-10H-1V9h18v1z"/></svg>
           Поддержать ☕

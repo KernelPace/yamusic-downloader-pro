@@ -25,6 +25,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('btn-prev');
     const nextBtn = document.getElementById('btn-next');
     const bgBlur = document.getElementById('bg-blur');
+    const progressBar = document.getElementById('progress-bar');
+    const timeCurEl = document.getElementById('time-current');
+    const timeTotEl = document.getElementById('time-total');
+    const dislikeBtn = document.getElementById('btn-dislike');
+    const confirmOverlay = document.getElementById('dislike-confirm');
+    const confirmYes = document.getElementById('dislike-yes');
+    const confirmNo = document.getElementById('dislike-no');
+    const coverEl = document.getElementById('cover');
+    const titleEl = document.getElementById('title');
+    const artistEl = document.getElementById('artist');
+    let isDragging = false;
+    let progressInterval = null;
+
+    const formatTime = (seconds) => {
+      if (!seconds || isNaN(seconds)) return "0:00";
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
+    // Функция обновления ползунка (только визуально)
+    const updateProgressUI = (pos, dur) => {
+      timeCurEl.textContent = formatTime(pos);
+      timeTotEl.textContent = formatTime(dur);
+      progressBar.max = dur || 100;
+      progressBar.value = pos || 0;
+      const percent = dur ? (pos / dur) * 100 : 0;
+      progressBar.style.backgroundSize = `${percent}% 100%`;
+    };
+
+    let trackSignature = ''; // Уникальный слепок: Обложка + Длительность
+
+    // Запускаем тикер (2 раза в секунду)
+    const startProgressLoop = () => {
+      if (progressInterval) clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (isDragging) return; // Не дергаем ползунок, пока юзер его тянет
+        chrome.tabs.sendMessage(ymTab.id, { action: "GET_PROGRESS" }, (res) => {
+          if (!chrome.runtime.lastError && res) {
+            updateProgressUI(res.position, res.duration);
+            
+            // АВТО-ПЕРЕКЛЮЧЕНИЕ ПРИ СМЕНЕ ТРЕКА
+            const currentSig = (res.cover || '') + '_' + (res.duration || 0);
+            
+            if (currentSig && currentSig !== '_0') {
+              if (!trackSignature) {
+                trackSignature = currentSig; // Инициализируем при открытии
+              } else if (trackSignature !== currentSig) {
+                trackSignature = currentSig; // Слепок изменился! Песня другая!
+                updateUI(); // Запускаем полное обновление картинки и текста
+              }
+            }
+          }
+        });
+      }, 500);
+    };
+
+    startProgressLoop(); // Стартуем сразу при открытии окна
+
+    // Юзер потянул ползунок
+    progressBar.addEventListener('input', (e) => {
+      isDragging = true;
+      const val = e.target.value;
+      const max = e.target.max;
+      timeCurEl.textContent = formatTime(val); // Обновляем цифры сразу
+      progressBar.style.backgroundSize = `${(val / max) * 100}% 100%`;
+    });
+
+    // Юзер отпустил ползунок
+    progressBar.addEventListener('change', (e) => {
+      const newPos = parseFloat(e.target.value);
+      const dur = parseFloat(e.target.max); // ДОБАВЛЕНА ДЛИТЕЛЬНОСТЬ
+      
+      // Передаем и позицию, и длительность во вкладку
+      chrome.tabs.sendMessage(ymTab.id, { action: "SEEK", position: newPos, duration: dur });
+      
+      setTimeout(() => { isDragging = false; }, 200);
+    });
 
     const setPlayIconState = (isPlaying) => {
       if (isPlaying) {
@@ -48,6 +126,14 @@ document.addEventListener('DOMContentLoaded', () => {
           
           document.getElementById('title').textContent = res.title || 'Неизвестный трек';
           document.getElementById('artist').textContent = res.artist || 'Неизвестный исполнитель';
+
+          // ДОБАВЛЕННЫЙ КОД: Генерируем URL
+          const trackUrl = (res.trackId && res.trackId !== 'vibe-active') ? `https://music.yandex.ru/track/${res.trackId}` : 'https://music.yandex.ru';
+          const artistUrl = `https://music.yandex.ru/search?text=${encodeURIComponent(res.artist)}&type=artists`;
+          
+          document.getElementById('cover-link').href = trackUrl;
+          document.getElementById('title').href = trackUrl;
+          document.getElementById('artist').href = artistUrl;
           
           if (res.isLiked) likeBtn.classList.add('liked');
           else likeBtn.classList.remove('liked');
@@ -173,6 +259,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     });
+	
+    // === ЛОГИКА ДИЗЛАЙКА С ПОДТВЕРЖДЕНИЕМ ===
+    dislikeBtn.addEventListener('click', () => {
+      confirmOverlay.classList.add('show');
+    });
+
+    confirmNo.addEventListener('click', () => {
+      confirmOverlay.classList.remove('show');
+    });
+
+    confirmYes.addEventListener('click', () => {
+      confirmOverlay.classList.remove('show');
+      // Отправляем приказ нажать дизлайк
+      chrome.tabs.sendMessage(ymTab.id, { action: "DISLIKE_CURRENT" });
+    });
+
+    // === УМНЫЕ НАТИВНЫЕ ССЫЛКИ ===
+    const linkIds = ['cover-link', 'title', 'artist'];
+    linkIds.forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('click', (e) => {
+        // Если это левый клик (и не зажат Ctrl/Shift) - не плодим новые вкладки, а переходим в текущей!
+        if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          chrome.tabs.update(ymTab.id, { url: el.href, active: true });
+          chrome.windows.update(ymTab.windowId, { focused: true });
+          window.close();
+        }
+        // Во всех остальных случаях (колесико мыши) браузер сам откроет ссылку в новой вкладке.
+      });
+    });
   }
     // Ловим красивые имена артистов из фона и плавно обновляем текст
     chrome.runtime.onMessage.addListener((msg) => {
@@ -180,7 +297,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleEl = document.getElementById('title');
         const artistEl = document.getElementById('artist');
         if (titleEl && msg.title) titleEl.textContent = msg.title;
-        if (artistEl && msg.artist) artistEl.textContent = msg.artist;
+        if (artistEl && msg.artist) {
+          artistEl.textContent = msg.artist;
+          // Обновляем ссылку артиста, когда прилетело красивое имя
+          artistEl.href = `https://music.yandex.ru/search?text=${encodeURIComponent(msg.artist)}&type=artists`;
+        }
       }
     });
     // --- ПРОВЕРКА ОБНОВЛЕНИЙ И ОТОБРАЖЕНИЕ ВЕРСИИ ---
@@ -216,3 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(err => console.warn('Не удалось проверить обновления:', err));
 });
+
+    // Открытие настроек расширения
+    document.getElementById('btn-settings').addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
+    });

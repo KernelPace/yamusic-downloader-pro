@@ -24,6 +24,8 @@ https://github.com/user-attachments/assets/7c06bc9f-4053-4f62-9a1c-1ed8b886823a
 
 👉 **[🚀 Установить YaMusic PRO из Chrome Web Store](https://chromewebstore.google.com/detail/yamusic-pro/klgmmeljbkpjblolcdnaiaeepdfbhbhg)**
 
+*(⭐ Если расширение оказалось для вас полезным, пожалуйста, оставьте отзыв в магазине Chrome — это очень поможет развитию проекта!)*
+
 ---
 
 ## 🚀 Главные преимущества

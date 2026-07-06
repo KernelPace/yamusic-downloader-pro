@@ -7,14 +7,14 @@
 *(Официальное переименование проекта из Yandex Music Downloader PRO)*
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/klgmmeljbkpjblolcdnaiaeepdfbhbhg.svg?style=for-the-badge&logo=google-chrome&color=brightgreen&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/yamusic-pro/klgmmeljbkpjblolcdnaiaeepdfbhbhg)
-[![Version](https://img.shields.io/badge/Версия-1.4.1-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
+[![Version](https://img.shields.io/badge/Версия-1.5.0-blue.svg?style=for-the-badge)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
 [![Chromium](https://img.shields.io/badge/Chrome_|_Edge_|_Yandex_|_Opera-4CAF50.svg?style=for-the-badge&logo=google-chrome)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![Firefox](https://img.shields.io/badge/Firefox-FF7139.svg?style=for-the-badge&logo=firefox-browser)](https://github.com/KernelPace/yamusic-downloader-pro)
 [![License](https://img.shields.io/badge/Лицензия-GPLv3-blue.svg?style=for-the-badge)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/KernelPace/yamusic-downloader-pro/total.svg?style=for-the-badge&color=brightgreen)](https://github.com/KernelPace/yamusic-downloader-pro/releases)
 [![Stars](https://img.shields.io/github/stars/KernelPace/yamusic-downloader-pro.svg?style=for-the-badge&color=yellow)](https://github.com/KernelPace/yamusic-downloader-pro/stargazers)
 
-https://github.com/user-attachments/assets/7c06bc9f-4053-4f62-9a1c-1ed8b886823a
+https://github.com/user-attachments/assets/22e3d049-55e5-4f49-9bc1-34bb98bfa5b4
 
 *Управляйте музыкой из любой вкладки браузера и сохраняйте любимые треки в максимальном студийном качестве — Lossless FLAC, современный M4A (AAC) или классический MP3.*
 
